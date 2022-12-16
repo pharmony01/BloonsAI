@@ -2,6 +2,7 @@ import pytesseract
 import cv2
 import numpy as np
 import pyscreenshot
+from string import digits
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -24,5 +25,11 @@ def main():
         gray = get_grayscale(image)
         thresh = thresholding(gray)
         
+        # Print the image
+        money = pytesseract.image_to_string(thresh)
+        money = ''.join(c for c in money if c in digits)
+        print(int(money))
+    
+    
 if __name__ == "__main__":
     main()
