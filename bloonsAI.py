@@ -13,6 +13,12 @@ import time
 # x1, y1, x2, y2 for where towers can be placed
 PLAY_AREA = [30, 130, 1440, 920]
 
+# Tower positions
+TOWER_POS = []
+
+# Hero Available
+HERO = True
+
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 def get_grayscale(image):
@@ -40,16 +46,16 @@ def money_OCR():
         if not money == '':
             return int(money)
             
-def place_tower(money, tower):
-    start_money = money
+def place_tower(tower):
     pydirectinput.press(tower)
-    print(money)
     for i in range(5):
         x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
         y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
+        start_money = money_OCR()
         pydirectinput.click(x1, y1)
         end_money = money_OCR()
         if end_money < start_money:
+            TOWER_POS.append([x1,y1])
             return
         
         
@@ -61,11 +67,10 @@ def main():
         if money > 450:
             tower = randint(1,10)
             if tower <= 5: 
-                place_tower(money, 'e')
+                place_tower('e')
             else:
-                place_tower(money, 'd')
-        
-    
+                place_tower('d')
+        print(TOWER_POS)
     
     
 if __name__ == "__main__":
