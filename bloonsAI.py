@@ -12,6 +12,7 @@ import time
 
 # x1, y1, x2, y2 for where towers can be placed
 PLAY_AREA = [30, 130, 1440, 920]
+WATER = [750, 450, 900, 585]
 
 # Tower positions
 TOWER_POS = []
@@ -46,11 +47,15 @@ def money_OCR():
         if not money == '':
             return int(money)
             
-def place_tower(tower):
+def place_tower(tower, water=False):
     pydirectinput.press(tower)
     for i in range(5):
-        x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
-        y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
+        if not water:
+            x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
+            y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
+        else:
+            x1 = randint(WATER[0], WATER[2])
+            y1 = randint(WATER[1], WATER[3])
         start_money = money_OCR()
         pydirectinput.click(x1, y1)
         end_money = money_OCR()
@@ -65,12 +70,13 @@ def main():
     while True:
         money = money_OCR()
         if money > 450:
-            tower = randint(1,10)
-            if tower <= 5: 
+            tower = randint(1,3)
+            if tower == 1: 
                 place_tower('e')
-            else:
+            elif tower == 2:
                 place_tower('d')
-        print(TOWER_POS)
+            elif tower == 3:
+                place_tower('c', True)
     
     
 if __name__ == "__main__":
