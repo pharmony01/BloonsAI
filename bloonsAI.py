@@ -4,12 +4,14 @@ import numpy as np
 import pyscreenshot
 from string import digits
 import pyautogui
+import pydirectinput
 from threading import Thread
 from random import randint
 import time
 
+
 # x1, y1, x2, y2 for where towers can be placed
-PLAY_AREA = [30, 85, 1630, 1030]
+PLAY_AREA = [30, 130, 1440, 920]
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
@@ -38,15 +40,14 @@ def money_OCR():
         if not money == '':
             return int(money)
             
-def place_bomb(money):
+def place_tower(money, tower):
     start_money = money
-    time.sleep(0.5)
-    pyautogui.press('e')
-    time.sleep(0.5)
+    pydirectinput.press(tower)
+    print(money)
     for i in range(5):
         x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
         y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
-        pyautogui.click(x1, y1)
+        pydirectinput.click(x1, y1)
         end_money = money_OCR()
         if end_money < start_money:
             return
@@ -58,7 +59,11 @@ def main():
     while True:
         money = money_OCR()
         if money > 450:
-            place_bomb(money)
+            tower = randint(1,10)
+            if tower <= 5: 
+                place_tower(money, 'e')
+            else:
+                place_tower(money, 'd')
         
     
     
