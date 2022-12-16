@@ -28,7 +28,8 @@ def main():
         # Print the image
         money = pytesseract.image_to_string(thresh)
         money = ''.join(c for c in money if c in digits)
-        print(int(money))
+        if not money == '':
+            print(int(money))
     
     
 if __name__ == "__main__":
