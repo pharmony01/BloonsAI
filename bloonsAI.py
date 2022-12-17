@@ -166,16 +166,28 @@ def place_tower(tower, water=False):
         pydirectinput.click(x1, y1)
         end_money = money_OCR()
         if end_money < start_money:
-            TOWER_POS.append([x1,y1])
+            TOWER_POS.append([x1,y1,[0,0,0]])
             return
         
+def upgrade_tower():
+    tower = randint(0, len(TOWER_POS) - 1)
+    upgrade = randint(0,2)
+    pydirectinput.click(TOWER_POS[tower][0], TOWER_POS[tower][1])
+    if upgrade == 0:
+        pydirectinput.press(',')
+    elif upgrade == 1:
+        pydirectinput.press('.')
+    else:
+        pydirectinput.press('/')
+    pydirectinput.press('esc')
         
             
 
 def main():
+    just_placed = False
     while True:
         money = money_OCR()
-        if money > 450:
+        if money > 565 and not just_placed:
             tower = randint(1,3)
             if tower == 1: 
                 place_tower('e')
@@ -183,8 +195,12 @@ def main():
                 place_tower('d')
             elif tower == 3:
                 place_tower('c', True)
-    
+            just_placed = True
+        else:
+            upgrade_tower()
+            just_placed = False
+        print(TOWER_POS)
     
 if __name__ == "__main__":
-    time.sleep(3)
+    time.sleep(2)
     main()
