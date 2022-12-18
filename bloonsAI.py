@@ -18,6 +18,17 @@ WATER = [750, 450, 900, 585]
 # Tower positions
 TOWER_POS = []
 
+# Can place hero
+HERO = True
+
+# Tower type to hotkey conversion
+# Length of 22
+TOWER_HOTKEY = ['q', 'w', 'e', 'r', 't', 'y', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'a', 's', 'd', 'f', 'g', 'j', 'k', 'l', 'u']
+
+# Tower place price
+# Length of 22
+TOWER_PLACE_PRICE = [215, 350, 565, 300, 540, 245, 380, 350, 540, 865, 1730, 810, 920, 405, 2700, 540, 595, 430, 1080, 1295, 430, 585]
+
 # Prices for all tower upgrades on hard
 TOWER_UPGRADES_HARD = [
     # Dart
@@ -152,54 +163,113 @@ def money_OCR():
         money = ''.join(c for c in money if c in digits)
         if not money == '':
             return int(money)
+        
+def can_place(tower_type):
+    if tower_type == 21:
+        return money_OCR() >= TOWER_PLACE_PRICE[tower_type] and HERO
+    return money_OCR() >= TOWER_PLACE_PRICE[tower_type]
             
-def place_tower(tower, water=False):
-    pydirectinput.press(tower)
+def place_tower(tower_type):
+    # Press the hotkey for the associated tower
+    pydirectinput.press(TOWER_HOTKEY[tower_type])
+    
+    # Try to place the tower 5 times before giving up
     for i in range(5):
-        if not water:
-            x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
-            y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
-        else:
-            x1 = randint(WATER[0], WATER[2])
-            y1 = randint(WATER[1], WATER[3])
-        start_money = money_OCR()
-        pydirectinput.click(x1, y1)
-        end_money = money_OCR()
+        # Randomly choose an area inside the playable area to place the tower
+        x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
+        y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
+        start_money = money_OCR()   # Check how much money you have
+        pydirectinput.click(x1, y1) # Try to place the tower
+        end_money = money_OCR()     # Check to see if your money went down
+        
+        # If your money went down you successfully placed the tower
         if end_money < start_money:
-            TOWER_POS.append([x1,y1,[0,0,0]])
+            # Save the tower location, initialize its upgrades, and save the tower type
+            TOWER_POS.append([x1,y1,[0,0,0], tower_type]) 
+            if tower_type == 21:
+                global HERO
+                HERO = False
             return
         
 def upgrade_tower():
-    tower = randint(0, len(TOWER_POS) - 1)
-    upgrade = randint(0,2)
+    # Initialize the variables needed for this function
+    viable_upgrade = False
+    tower = 0
+    upgrade = 0
+    
+    # Keep looping until a viable upgrade is found
+    for i in range(5):
+        tower = -1
+        # Loop until you select a tower that isn't the hero
+        while True:
+            # Randomly selects a tower to upgrade
+            tower = randint(0, len(TOWER_POS) - 1)
+            if TOWER_POS[tower][3] != 21:
+                break
+    
+        # Randomly chooses a path to upgrade
+        upgrade = randint(0,2)
+        viable_upgrade = can_upgrade(tower, upgrade)
+
+    if not viable_upgrade:
+        return
+    
+    # Clicks on the tower
     pydirectinput.click(TOWER_POS[tower][0], TOWER_POS[tower][1])
+    
+    # Based on the choice of upgrade, clicks the appropriate hotkey
+    # Then updates the array of upgrades the tower has
     if upgrade == 0:
         pydirectinput.press(',')
+        TOWER_POS[tower][2][0] += 1
     elif upgrade == 1:
         pydirectinput.press('.')
+        TOWER_POS[tower][2][1] += 1
     else:
         pydirectinput.press('/')
+        TOWER_POS[tower][2][2] += 1
     pydirectinput.press('esc')
         
-            
+def can_upgrade(tower, path):
+    # Takes the currently upgraded paths on the tower
+    current_paths = TOWER_POS[tower][2]
+    only_two_paths = True
+    upgrarde_past_two = True
+
+    # Checks if the path has been already been upgraded to tier 5
+    if current_paths[path] == 5:
+        return False
+
+    # Checks if there is at least one upgrade in two of the paths
+    if (current_paths[0] > 0 and current_paths[1] > 0) or (current_paths[0] > 0 and current_paths[2] > 0) or (current_paths[2] > 0 and current_paths[1] > 0):
+        only_two_paths =  current_paths[path] > 0
+        
+    # Checks if any of the paths are upgraded to tier 3 already
+    if (current_paths[0] or current_paths[1] or current_paths[2]) > 2:
+        upgrarde_past_two =  current_paths[path] > 2
+    
+    # Gets the amount of money you currently have
+    # From the TOWER_UPGRADES you get the array that has the tower upgrades for the specific tower
+    # Which is equal to the tower_type * 3 + which path you are trying to upgrade
+    # You then check for the current paths at the position of which path you are trying to upgrade
+    # This will return a single number that you can then check against the amount of money you
+    has_enough_money = money_OCR() >= TOWER_UPGRADES_HARD[TOWER_POS[tower][3] * 3 + path][current_paths[path]]
+    
+    # Only returns true if the AI is trying to upgrade a viable path and you have enough money
+    return only_two_paths and upgrarde_past_two and has_enough_money            
+
+def curr_time():
+    return round(time.time() * 1000)
 
 def main():
-    just_placed = False
     while True:
-        money = money_OCR()
-        if money > 565 and not just_placed:
-            tower = randint(1,3)
-            if tower == 1: 
-                place_tower('e')
-            elif tower == 2:
-                place_tower('d')
-            elif tower == 3:
-                place_tower('c', True)
-            just_placed = True
+        tower = randint(0, 21)
+        if can_place(tower):
+            place_tower(tower)
         else:
+            time.sleep(3)
+        if len(TOWER_POS) != 0 and curr_time() % 3 == 0:
             upgrade_tower()
-            just_placed = False
-        print(TOWER_POS)
     
 if __name__ == "__main__":
     time.sleep(2)
