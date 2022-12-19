@@ -10,6 +10,8 @@ from random import randint
 import time
 import pdb
 
+# Print statements on
+VERBOSE = True
 
 # x1, y1, x2, y2 for where towers can be placed
 PLAY_AREA = [30, 130, 1440, 920]
@@ -165,6 +167,8 @@ def money_OCR():
             return int(money)
         
 def can_place(tower_type):
+    if VERBOSE:
+        print(f'Trying to see if we can place tower type {tower_type}')
     if tower_type == 21:
         return money_OCR() >= TOWER_PLACE_PRICE[tower_type] and HERO
     return money_OCR() >= TOWER_PLACE_PRICE[tower_type]
@@ -175,6 +179,8 @@ def place_tower(tower_type):
     
     # Try to place the tower 5 times before giving up
     for i in range(5):
+        if VERBOSE:
+            print(f'Attempt {i+1} to place tower type {tower_type}')
         # Randomly choose an area inside the playable area to place the tower
         x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
         y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
@@ -185,11 +191,16 @@ def place_tower(tower_type):
         # If your money went down you successfully placed the tower
         if end_money < start_money:
             # Save the tower location, initialize its upgrades, and save the tower type
+            if VERBOSE:
+                print(f'Successfully placed tower type {tower_type} after {i+1} attempts')
             TOWER_POS.append([x1,y1,[0,0,0], tower_type]) 
             if tower_type == 21:
                 global HERO
                 HERO = False
             return
+    if VERBOSE:
+        print('Pressing Escape in place_tower()')
+    pydirectinput.press('esc')
         
 def upgrade_tower():
     # Initialize the variables needed for this function
@@ -209,7 +220,11 @@ def upgrade_tower():
     
         # Randomly chooses a path to upgrade
         upgrade = randint(0,2)
+        if VERBOSE:
+            print(f"Attempt {i+1} to upgrade tower type {TOWER_POS[tower][3]} with upgrade path {upgrade}")
         viable_upgrade = can_upgrade(tower, upgrade)
+        if viable_upgrade:
+            break
 
     if not viable_upgrade:
         return
@@ -228,6 +243,10 @@ def upgrade_tower():
     else:
         pydirectinput.press('/')
         TOWER_POS[tower][2][2] += 1
+    if VERBOSE:
+        print(f'Successfully upgraded tower type {TOWER_POS[tower][3]} with an upgrade to path {upgrade}')
+        print('Pressing Escape in upgrade_tower()')
+    time.sleep(0.1)
     pydirectinput.press('esc')
         
 def can_upgrade(tower, path):
@@ -266,9 +285,10 @@ def main():
         tower = randint(0, 21)
         if can_place(tower):
             place_tower(tower)
-        else:
-            time.sleep(3)
-        if len(TOWER_POS) != 0 and curr_time() % 3 == 0:
+        time.sleep(3)
+        if len(TOWER_POS) != 0:
+            if VERBOSE:
+                print("Upgrade time")
             upgrade_tower()
     
 if __name__ == "__main__":
