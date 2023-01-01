@@ -10,6 +10,9 @@ from random import randint
 import time
 import pdb
 
+# Previous money, used for making sure the OCR gets the correct value
+OLD_MONEY = 650
+
 # Print statements on
 VERBOSE = True
 
@@ -30,6 +33,9 @@ TOWER_HOTKEY = ['q', 'w', 'e', 'r', 't', 'y', 'z', 'x', 'c', 'v', 'b', 'n', 'm',
 # Tower place price
 # Length of 22
 TOWER_PLACE_PRICE = [215, 350, 565, 300, 540, 245, 380, 350, 540, 865, 1730, 810, 920, 405, 2700, 540, 595, 430, 1080, 1295, 430, 585]
+
+# Stores the names of the towers, used in Verbose mode
+TOWER_NAME = ['Dart', 'Boomerang', 'Bomb', 'Tack', 'Ice', 'Glue', 'Sniper', 'Sub', 'Buccaneer', 'Ace', 'Heli', 'Mortar', 'Dartling', 'Wizard', 'Super', 'Ninja', 'Alchemist', 'Druid', 'Spike', 'Village', 'Engineer', 'Hero']
 
 # Prices for all tower upgrades on hard
 TOWER_UPGRADES_HARD = [
@@ -141,13 +147,24 @@ TOWER_UPGRADES_HARD = [
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-def get_grayscale(image):
-    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-
-def thresholding(image):
-    return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
+def process_image(image):
+    # Find all pixels that are not perfectly white
+    non_white = np.where(
+        (image[:, :, 0] != 255) & 
+        (image[:, :, 1] != 255) &
+        (image[:, :, 2] != 255)
+    )
+    
+    # Set all non-white pixels to black
+    image[non_white] = [0, 0, 0]
+    
+    # Return the new image to be read
+    return image
+    
+    
 
 def money_OCR():
+    global OLD_MONEY
     while True:
         # Take a screenshot of the games money value
         pic = pyscreenshot.grab(bbox=(343,14,485,65))
@@ -156,19 +173,32 @@ def money_OCR():
         # Convert the image to cv2
         image = cv2.imread('money.png')
         
-        # Grayscale the image and threshhold it
-        gray = get_grayscale(image)
-        thresh = thresholding(gray)
+        # Used for visualizing preprocessed image
+        # cv2.imshow('image', image)
+        # cv2.waitKey(0)
         
-        # Print the image
-        money = pytesseract.image_to_string(thresh)
+        # Process the image
+        processed = process_image(image)
+        
+        # Used for visualizing the processed image
+        # cv2.imshow('image', processed)
+        # cv2.waitKey(0)
+        
+        # Use pytesseract to generate a string from the image
+        money = pytesseract.image_to_string(processed, config=" --psm 6")
+        
+        # Remove any non-integers from the string
         money = ''.join(c for c in money if c in digits)
+        
+        # If there is a value, (not a blank string) AND there value given isn't too far away from the old value
         if not money == '':
-            return int(money)
+            if int(money) < (OLD_MONEY + 500):
+                OLD_MONEY = int(money)
+                return int(money)
         
 def can_place(tower_type):
     if VERBOSE:
-        print(f'Trying to see if we can place tower type {tower_type}')
+        print(f'Trying to see if we can place tower type {TOWER_NAME[tower_type]}')
     if tower_type == 21:
         return money_OCR() >= TOWER_PLACE_PRICE[tower_type] and HERO
     return money_OCR() >= TOWER_PLACE_PRICE[tower_type]
@@ -180,7 +210,7 @@ def place_tower(tower_type):
     # Try to place the tower 5 times before giving up
     for i in range(5):
         if VERBOSE:
-            print(f'Attempt {i+1} to place tower type {tower_type}')
+            print(f'Attempt {i+1} to place tower type {TOWER_NAME[tower_type]}')
         # Randomly choose an area inside the playable area to place the tower
         x1 = randint(PLAY_AREA[0], PLAY_AREA[2])
         y1 = randint(PLAY_AREA[1], PLAY_AREA[3])
@@ -192,7 +222,7 @@ def place_tower(tower_type):
         if end_money < start_money:
             # Save the tower location, initialize its upgrades, and save the tower type
             if VERBOSE:
-                print(f'Successfully placed tower type {tower_type} after {i+1} attempts')
+                print(f'Successfully placed tower type {TOWER_NAME[tower_type]} after {i+1} attempts')
             TOWER_POS.append([x1,y1,[0,0,0], tower_type]) 
             if tower_type == 21:
                 global HERO
@@ -221,7 +251,7 @@ def upgrade_tower():
         # Randomly chooses a path to upgrade
         upgrade = randint(0,2)
         if VERBOSE:
-            print(f"Attempt {i+1} to upgrade tower type {TOWER_POS[tower][3]} with upgrade path {upgrade}")
+            print(f"Attempt {i+1} to upgrade tower type {TOWER_NAME[TOWER_POS[tower][3]]} with upgrade path {upgrade}")
         viable_upgrade = can_upgrade(tower, upgrade)
         if viable_upgrade:
             break
@@ -244,7 +274,7 @@ def upgrade_tower():
         pydirectinput.press('/')
         TOWER_POS[tower][2][2] += 1
     if VERBOSE:
-        print(f'Successfully upgraded tower type {TOWER_POS[tower][3]} with an upgrade to path {upgrade}')
+        print(f'Successfully upgraded tower type {TOWER_NAME[TOWER_POS[tower][3]]} with an upgrade to path {upgrade}')
         print('Pressing Escape in upgrade_tower()')
     time.sleep(0.1)
     pydirectinput.press('esc')
