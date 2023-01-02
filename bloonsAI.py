@@ -147,24 +147,13 @@ TOWER_UPGRADES_HARD = [
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-def process_image(image):
-    # Find all pixels that are not perfectly white
-    non_white = np.where(
-        (image[:, :, 0] != 255) & 
-        (image[:, :, 1] != 255) &
-        (image[:, :, 2] != 255)
-    )
-    
-    # Set all non-white pixels to black
-    image[non_white] = [0, 0, 0]
-    
-    # Return the new image to be read
-    return image
-    
-    
+def get_grayscale(image):
+    return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+def thresholding(image):
+    return cv2.threshold(image, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)[1]
 
 def money_OCR():
-    global OLD_MONEY
     while True:
         # Take a screenshot of the games money value
         pic = pyscreenshot.grab(bbox=(343,14,485,65))
@@ -173,28 +162,15 @@ def money_OCR():
         # Convert the image to cv2
         image = cv2.imread('money.png')
         
-        # Used for visualizing preprocessed image
-        # cv2.imshow('image', image)
-        # cv2.waitKey(0)
+        # Grayscale the image and threshhold it
+        gray = get_grayscale(image)
+        thresh = thresholding(gray)
         
-        # Process the image
-        processed = process_image(image)
-        
-        # Used for visualizing the processed image
-        # cv2.imshow('image', processed)
-        # cv2.waitKey(0)
-        
-        # Use pytesseract to generate a string from the image
-        money = pytesseract.image_to_string(processed, config=" --psm 6")
-        
-        # Remove any non-integers from the string
+        # Print the image
+        money = pytesseract.image_to_string(thresh)
         money = ''.join(c for c in money if c in digits)
-        
-        # If there is a value, (not a blank string) AND there value given isn't too far away from the old value
         if not money == '':
-            if int(money) < (OLD_MONEY + 500):
-                OLD_MONEY = int(money)
-                return int(money)
+            return int(money)
         
 def can_place(tower_type):
     if VERBOSE:
@@ -315,7 +291,7 @@ def main():
         tower = randint(0, 21)
         if can_place(tower):
             place_tower(tower)
-        time.sleep(3)
+        time.sleep(1)
         if len(TOWER_POS) != 0:
             if VERBOSE:
                 print("Upgrade time")
